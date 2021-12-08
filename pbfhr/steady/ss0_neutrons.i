@@ -49,6 +49,8 @@ fis_fract            = ${fparse 1 - dh_fract} # Fission power fraction at t = 0.
     family = LAGRANGE
     order = FIRST
     verbose = 2
+    assemble_scattering_jacobian = true
+    assemble_fission_jacobian = true
   []
 []
 
@@ -114,13 +116,13 @@ fis_fract            = ${fparse 1 - dh_fract} # Fission power fraction at t = 0.
     family = MONOMIAL
     order = CONSTANT
     initial_condition = ${initial_fuel_temperature}
-    block = '1 2 3 4 5 6 7 8 9'  #FIXME
+    block = '1 2 3 4 5 6 7 8 9'
   []
   [Tsalt]
     family = MONOMIAL
     order = CONSTANT
     initial_condition = ${initial_salt_temperature}
-    block = '1 2 3 4 5 6 7 8 9'  #FIXME
+    block = '1 2 3 4 5 6 7 8 9'
   []
   [CR_insertion]
     family = MONOMIAL
@@ -243,8 +245,8 @@ fis_fract            = ${fparse 1 - dh_fract} # Fission power fraction at t = 0.
   []
   [rod_insertion]
     type = FunctionAux
-    function = control_rod_position
     variable = 'CR_insertion'
+    function = control_rod_position
   []
 []
 
@@ -258,7 +260,7 @@ fis_fract            = ${fparse 1 - dh_fract} # Fission power fraction at t = 0.
   [control_rod_position]
     type = PiecewiseLinear
     x = '0 10'
-    y = '2 2'
+    y = '4 4'
   []
 []
 
@@ -278,7 +280,7 @@ fis_fract            = ${fparse 1 - dh_fract} # Fission power fraction at t = 0.
   # TODO: Make a Tsalt_ave variable to propagate effect of Tsalt to other regions
   # TODO: Generate cross sections for the plenum region separately
   [inner_reflector]
-    type = CoupledFeedbackNeutronicsMaterial  #FIXME
+    type = CoupledFeedbackNeutronicsMaterial
     grid_names = 'Tfuel Tsalt CR'
     grid_variables = 'Tfuel Tsalt CR_insertion'
     plus = true
@@ -363,7 +365,10 @@ fis_fract            = ${fparse 1 - dh_fract} # Fission power fraction at t = 0.
 [Executioner]
   type = Eigenvalue
 
-  solve_type = 'PJFNK'
+  # solve_type = 'PJFNK'
+  solve_type = PJFNKMO
+  constant_matrices = true
+
   petsc_options_iname = '-pc_type -pc_hypre_type -ksp_gmres_restart'
   petsc_options_value = 'hypre boomeramg 100'
   line_search = none
@@ -374,22 +379,17 @@ fis_fract            = ${fparse 1 - dh_fract} # Fission power fraction at t = 0.
   l_tol = 1e-3
 
   nl_max_its = 50
-  nl_rel_tol = 1e-5
-  nl_abs_tol = 1e-5
+  nl_rel_tol = 1e-4
+  nl_abs_tol = 1e-4
 
   # Power iterations, before the non-linear solve
   free_power_iterations = 2
 
   # Fixed point iterations
-  fixed_point_abs_tol = 1e-6
-  fixed_point_rel_tol = 1e-6
+  fixed_point_abs_tol = 1e-4
+  fixed_point_rel_tol = 1e-4
   fixed_point_max_its = 10
   disable_fixed_point_residual_norm_check = false
-
-  # Quadrature for CR material
-  [Quadrature]
-    order = FOURTH
-  []
 []
 
 # ==============================================================================
@@ -401,7 +401,6 @@ fis_fract            = ${fparse 1 - dh_fract} # Fission power fraction at t = 0.
     type = FullSolveMultiApp
     input_files = 'ss1_combined.i'
     execute_on = 'timestep_end' # once power distribution is computed
-    positions = '0.0 0.0 0.0'
   []
 []
 
@@ -484,6 +483,10 @@ fis_fract            = ${fparse 1 - dh_fract} # Fission power fraction at t = 0.
 []
 
 [Outputs]
+  print_linear_residuals = false
+  print_nonlinear_converged_reason = false
+  print_linear_converged_reason = false
+
   # file_base = mk1_fhr
   exodus = true
   csv = true

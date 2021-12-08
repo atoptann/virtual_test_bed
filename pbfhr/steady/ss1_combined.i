@@ -597,7 +597,7 @@ power_density = ${fparse total_power / model_vol / 258 * 236}  # adjusted using 
     block = '5'
   []
   [alpha_OR_plenum]
-    type = ADGenericConstantFunctorMaterial
+    type = ADGenericFunctorMaterial
     prop_names = 'alpha'
     prop_values = '0.0'
     block = '5 6'
@@ -715,17 +715,21 @@ power_density = ${fparse total_power / model_vol / 258 * 236}  # adjusted using 
   dtmax = 2e4
   end_time = 1e6
 
+  # [TimeStepper]
+  #   type = IterationAdaptiveDT
+  #   dt                 = 1
+  #   cutback_factor     = 0.5
+  #   growth_factor      = 2.0
+  # []
   [TimeStepper]
-    type = IterationAdaptiveDT
-    dt                 = 1
-    cutback_factor     = 0.5
-    growth_factor      = 2.0
+    type = TimeSequenceStepper
+    time_sequence = '0 1 3 5 7 11 19 35 67 131 259 515 1000'
   []
 
   # Steady state detection.
   steady_state_detection = true
-  steady_state_tolerance = 1e-8
-  steady_state_start_time = 200000
+  steady_state_tolerance = 1e-5
+  steady_state_start_time = 1000
 []
 
 # ==============================================================================
@@ -820,38 +824,6 @@ power_density = ${fparse total_power / model_vol / 258 * 236}  # adjusted using 
     value2 = pressure_in
   []
 
-  # Energy balance
-  # Energy balance will be shown once #18119 #18123 are merged in MOOSE
-  # [outer_heat_loss]
-  #   type = ADSideDiffusiveFluxIntegral
-  #   boundary = 'brick_surface'
-  #   variable = temp_solid
-  #   diffusivity = 'k_s'
-  #   execute_on = 'INITIAL TIMESTEP_END'
-  # []
-  [flow_in_m]
-    type = VolumetricFlowRate
-    boundary = 'bed_horizontal_bottom OR_horizontal_bottom'
-    advected_mat_prop = 'rho_cp_temp'
-  []
-  # [diffusion_in]
-  #   type = ADSideVectorDiffusivityFluxIntegral
-  #   variable = temp_fluid
-  #   boundary = 'bed_horizontal_bottom OR_horizontal_bottom'
-  #   diffusivity = 'kappa'
-  # []
-  # diffusion at the top is 0 because of the fully developped flow assumption
-  [flow_out]
-    type = VolumetricFlowRate
-    boundary = 'bed_horizontal_top plenum_top OR_horizontal_top'
-    advected_mat_prop = 'rho_cp_temp'
-  []
-  # [core_balance]
-  #   type = ParsedPostprocessor
-  #   pp_names = 'power flow_in_m diffusion_in flow_out outer_heat_loss'
-  #   function = 'power - flow_in_m + diffusion_in - flow_out + outer_heat_loss'
-  # []
-
   # Bypass
   [mass_flow_OR]
     type = VolumetricFlowRate
@@ -885,6 +857,11 @@ power_density = ${fparse total_power / model_vol / 258 * 236}  # adjusted using 
 []
 
 [Outputs]
+  print_linear_residuals = false
+  print_linear_converged_reason = false
+
+  print_nonlinear_converged_reason = false
+
   csv = true
   hide = 'pressure_in pressure_out mass_flow_OR mass_flow_plenum max_vy '
         # 'bypass_fraction plenum_fraction max_Tf h pressure_drop'
